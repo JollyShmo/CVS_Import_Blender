@@ -5,6 +5,7 @@
 [![download](https://github.com/JollyShmo/CSV_Import_Blender/blob/Beta/version_csv_import_beta2.png)](https://github.com/JollyShmo/CSV_Import_Blender/releases/download/v4.2.2/csv_mesh_importer-beta.zip)
 
 This Blender addon allows you to import a CSV file and it will auto create a 3d mesh by connected points, edges and faces. It's particularly useful for visualizing point data captured using tools like 'RenderDoc' to export the CSV file as a 3D Mesh. Works for a number of games including Bioshock Series, We Happy Few, and more.
+> Hint: In RenderDoc you must right-click in the VS Input and `Export the VS Input to CSV` (otherwise you may get skewed results)
 
 | RenderDoc | Blender|
 | :-------- | :----- |
