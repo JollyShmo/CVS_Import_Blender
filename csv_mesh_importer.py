@@ -120,24 +120,73 @@ class CSVMeshImporterOperator(bpy.types.Operator, ImportHelper):
         description="Column index for Z coordinate",
         min=0,
     )
+    # Normal x
+    normal_x_column: bpy.props.IntProperty(
+        name="NORMAL.x",
+        default=5,
+        description="Column index for normal X coordinate",
+        min=0,
+    )
+    # Normal y
+    normal_y_column: bpy.props.IntProperty(
+        name="NORMAL.y",
+        default=6,
+        description="Column index for normal Y coordinate",
+        min=0,
+    )
+    # Normal z
+    normal_z_column: bpy.props.IntProperty(
+        name="NORMAL.z",
+        default=7,
+        description="Column index for normal Z coordinate",
+        min=0,
+    )
+    # Color r
+    color_r_column: bpy.props.IntProperty(
+        name="COLOR.r",
+        default=8,
+        description="Column index for color R coordinate",
+        min=0,
+    )
+    # Color g
+    color_g_column: bpy.props.IntProperty(
+        name="COLOR.g",
+        default=9,
+        description="Column index for color G coordinate",
+        min=0,
+    )
+    # Color b
+    color_b_column: bpy.props.IntProperty(
+        name="COLOR.b",
+        default=10,
+        description="Column index for color B coordinate",
+        min=0,
+    )
+    # Color a
+    color_a_column: bpy.props.IntProperty(
+        name="COLOR.a",
+        default=11,
+        description="Column index for color A coordinate",
+        min=0,
+    )
     # Texture x
     pos_ux_column: bpy.props.IntProperty(
         name="§ TEXTURE.x",
-        default=14,
+        default=12,
         description="Column index for uv X coordinate",
         min=0,
     )
     # Texture y
     pos_uy_column: bpy.props.IntProperty(
         name="§ TEXTURE.y",
-        default=15,
+        default=13,
         description="Column index for uv Y coordinate",
         min=0,
     )
     # Shade smooth
     smooth_finish: bpy.props.BoolProperty(
         name="✨ Shade Smooth",
-        default=True,
+        default=False,
         description="Auto Smooth Finish",
     )
     # CSV format
@@ -196,6 +245,9 @@ class CSVMeshImporterOperator(bpy.types.Operator, ImportHelper):
             layout.prop(self, "pos_x_column")
             layout.prop(self, "pos_y_column")
             layout.prop(self, "pos_z_column")
+            layout.prop(self, "normal_x_column")
+            layout.prop(self, "normal_y_column")
+            layout.prop(self, "normal_z_column")
 
         if self.beta_test == 'BETA':
             layout.prop(self, "hide_option_uv")
@@ -240,6 +292,9 @@ class CSVMeshImporterOperator(bpy.types.Operator, ImportHelper):
                         'POSITION.x': self.pos_x_column,
                         'POSITION.y': self.pos_y_column,
                         'POSITION.z': self.pos_z_column,
+                        'NORMAL.x': self.normal_x_column,
+                        'NORMAL.y': self.normal_y_column,
+                        'NORMAL.z': self.normal_z_column,
                         'TEXCOORD.x': self.pos_ux_column,
                         'TEXCOORD.y': self.pos_uy_column,
                     }
@@ -250,46 +305,67 @@ class CSVMeshImporterOperator(bpy.types.Operator, ImportHelper):
                 next(reader)
                 
                 vertices = []
+                normals = []
+                colors = []
                 uv = []
                 
                 for row in reader:                        
-                    x = float(row[headers['POSITION.x']])
-                    y = float(row[headers['POSITION.y']])
-                    z = float(row[headers['POSITION.z']]) 
+                    x = float(get_value_from_array_safe(headers['POSITION.x'], row, 0.0))
+                    y = float(get_value_from_array_safe(headers['POSITION.y'], row, 0.0))
+                    z = float(get_value_from_array_safe(headers['POSITION.z'], row, 0.0)) 
 
-                    vertices.append((x * self.scale_factor, y * self.scale_factor, z * self.scale_factor))
+                    #these haven't been added to the headers
+                    normal_x = float(get_value_from_array_safe(self.normal_x_column, row, 0.0))
+                    normal_y = float(get_value_from_array_safe(self.normal_y_column, row, 0.0))
+                    normal_z = float(get_value_from_array_safe(self.normal_z_column, row, 0.0))
+                    color_r = float(get_value_from_array_safe(self.color_r_column, row, 1.0))
+                    color_g = float(get_value_from_array_safe(self.color_g_column, row, 1.0))
+                    color_b = float(get_value_from_array_safe(self.color_b_column, row, 1.0))
+                    color_a = float(get_value_from_array_safe(self.color_a_column, row, 1.0))
+                    
+                    tx = float(get_value_from_array_safe(headers['TEXCOORD.x'], row, 0.0))
+                    ty = float(get_value_from_array_safe(headers['TEXCOORD.y'], row, 0.0))
+                    
                     # WHF UV
                     if self.csv_format == 'WE_HAPPY_FEW':
-                        tx = float(row[headers['TEXCOORD.x']])
-                        ty = float(row[headers['TEXCOORD.y']])
-                        uv.append((tx, ty))
+                        pass
                     # STZ UV
                     elif self.csv_format == 'STUBBS':
-                        tx = float(row[headers['TEXCOORD.x']])
-                        ty = float(row[headers['TEXCOORD.y']])
-                        uv.append((tx, ty))
+                        pass
                     # BIO UV
                     elif self.csv_format == 'BIOSHOCK_INF':
-                        tx = float(row[headers['TEXCOORD0.x']])
-                        ty = float(row[headers['TEXCOORD0.y']])
-                        uv.append((tx, ty))
+                        tx = float(get_value_from_array_safe(headers['TEXCOORD0.x'], row, 0.0))
+                        ty = float(get_value_from_array_safe(headers['TEXCOORD0.y'], row, 0.0))
                     # OTHER XYZ + UV        
                     elif self.csv_format == 'OTHER':
-                        x = float(row[self.pos_x_column])
-                        y = float(row[self.pos_y_column])
-                        z = float(row[self.pos_z_column])
+                        pass
+                    
+                    vertices.append(
+                        (
+                            x * self.scale_factor, 
+                            y * self.scale_factor, 
+                            z * self.scale_factor
+                        )
+                    )
+                    normals.append((normal_x, normal_y, normal_z))
+                    colors.append((color_r, color_g, color_b, color_a))
+                    uv.append((tx, ty))
                             
-                        if self.hide_option_uv:
-                            tx = float(row[headers['TEXCOORD.x']])
-                            ty = float(row[headers['TEXCOORD.y']])
-                            uv.append((tx, ty))
-                            vertices.append((x * self.scale_factor, y * self.scale_factor, z * self.scale_factor))
-                            
+
                 mesh = bpy.data.meshes.new("CSV_Mesh")
                 bm = bmesh.new()
                 
                 for vertex in vertices:
                     bm.verts.new(vertex)
+                
+                #add color data
+                layer_color = bm.verts.layers.color.active
+                if layer_color is None:
+                    layer_color = bm.verts.layers.color.new()
+                
+                for vertex in bm.verts:
+                    vertex[layer_color] = colors[vertex.index]
+
                 # Connect the vertices based on the selected connection method
                 bm.verts.ensure_lookup_table()
                 # Edges
@@ -335,6 +411,9 @@ class CSVMeshImporterOperator(bpy.types.Operator, ImportHelper):
             # Update the BMesh and populate the mesh with BMesh data
             bm.to_mesh(mesh)
             bm.free()
+
+            #add normals to mesh
+            mesh.normals_split_custom_set(normals)
 
             # Create a new object from the mesh
             obj = bpy.data.objects.new(self.rename_option, mesh)
@@ -447,6 +526,13 @@ class CSVMeshImporterOperator(bpy.types.Operator, ImportHelper):
             return {'CANCELLED'}
         self.report({'INFO'}, "Mesh imported successfully.")
         return {'FINISHED'}
+
+def get_value_from_array_safe(index, array, default = None):
+    if len(array) < index:
+        return default
+
+    return array[index]
+
 
 def menu_func_import(self, context):
     self.layout.operator(CSVMeshImporterOperator.bl_idname, text="CSV Mesh (.csv)")
